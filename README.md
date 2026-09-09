@@ -20,6 +20,4 @@ pip install -r requirements.txt
 bash scripts/run_pipeline.sh full
 
 
-data pipeline.png
-
 
