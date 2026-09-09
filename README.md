@@ -18,3 +18,7 @@ Prerequisites: Python 3.12, JDK 17 on `PATH`.
 ```bash
 pip install -r requirements.txt
 bash scripts/run_pipeline.sh full
+
+
+![alt text](image.png)
+
