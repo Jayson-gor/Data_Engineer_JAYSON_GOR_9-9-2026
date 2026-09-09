@@ -1,0 +1,75 @@
+version: 2
+
+models:
+  - name: stg_silver__flight_fares
+    description: >
+      Staging view over Silver valid fare observations. Grain: one row per
+      fare_record_key (= distinct set of business attributes within a snapshot_date).
+    columns:
+      - name: fare_record_key
+        description: SHA-256 of all business columns + snapshot_date. Primary key.
+        tests: [not_null, unique]
+      - name: snapshot_date
+        description: Business date the fare was observed (from the supplier file name).
+        tests: [not_null]
+      - name: airline_code
+        description: IATA two-character carrier code.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["SG", "I5", "UK", "AI", "6E", "G8"]
+      - name: flight_number
+        description: Carrier code + number (e.g. UK-706). NULL when unrecoverable in source (flagged in dq_warnings).
+      - name: source_city
+        tests: [not_null]
+      - name: destination_city
+        tests: [not_null]
+      - name: stops
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1, 2]
+              quote: false
+      - name: cabin_class
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Economy", "Business"]
+      - name: duration_hours
+        tests:
+          - not_null
+          - positive_value
+      - name: days_left
+        description: Days between fare observation and departure.
+        tests:
+          - not_null
+          - value_between:
+              min_value: 0
+              max_value: 365
+      - name: price_inr
+        description: Fare price in Indian Rupees.
+        tests:
+          - not_null
+          - positive_value
+      - name: dq_warnings
+        description: Comma-separated warn-severity rule names that fired (record was kept).
+      - name: duplicate_count
+        description: Number of identical copies of this record that arrived in the same file (>=1).
+
+  - name: stg_silver__flight_fares_rejected
+    description: Records rejected in Silver with their raw values and rejection_reasons.
+    columns:
+      - name: rejection_reasons
+        tests: [not_null]
+
+  - name: stg_silver__dq_results
+    description: Rule-level evaluation results per batch.
+
+  - name: stg_silver__reconciliation
+    description: Bronze-to-Silver row-count balance per batch.
+    columns:
+      - name: is_balanced
+        tests:
+          - accepted_values:
+              values: [true]
+              quote: false

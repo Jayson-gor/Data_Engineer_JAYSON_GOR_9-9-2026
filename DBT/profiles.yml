@@ -1,0 +1,23 @@
+# Local development target: DuckDB over the Silver Parquet files.
+# Production target: Amazon Redshift (models are written in portable SQL;
+# adapter-specific behaviour is isolated in macros/).
+airline_analytics:
+  target: "{{ env_var('DBT_TARGET', 'duckdb') }}"
+  outputs:
+    duckdb:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', '../data/warehouse.duckdb') }}"
+      schema: main
+      threads: 4
+      extensions: [parquet]
+
+    redshift:
+      type: redshift
+      host: "{{ env_var('REDSHIFT_HOST', 'placeholder.redshift.amazonaws.com') }}"
+      port: 5439
+      user: "{{ env_var('REDSHIFT_USER', 'dbt') }}"
+      password: "{{ env_var('REDSHIFT_PASSWORD', '') }}"
+      dbname: "{{ env_var('REDSHIFT_DB', 'analytics') }}"
+      schema: analytics
+      threads: 8
+      ra3_node: true

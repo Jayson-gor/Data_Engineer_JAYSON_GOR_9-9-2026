@@ -1,0 +1,32 @@
+version: 2
+
+sources:
+  - name: silver
+    description: >
+      Trusted layer produced by pyspark/silver_transform.py. Locally these are
+      Parquet folders read directly by DuckDB; on Redshift they are tables loaded
+      via COPY (see redshift/load/). Only VALID records are in flight_fares.
+    schema: main
+    loader: pyspark
+    meta:
+      external_location: "read_parquet('../data/silver/{name}/*/*.parquet', hive_partitioning = true)"
+    tables:
+      - name: flight_fares
+        description: One row per distinct fare observation per snapshot_date (exact duplicates already collapsed).
+        loaded_at_field: _silver_processed_at
+        freshness:
+          warn_after: { count: 36, period: hour }
+          error_after: { count: 72, period: hour }
+        columns:
+          - name: fare_record_key
+            tests: [not_null, unique]
+          - name: price_inr
+            tests:
+              - not_null
+              - positive_value
+      - name: flight_fares_rejected
+        description: Records that failed at least one error-severity rule, with rejection_reasons.
+      - name: dq_results
+        description: Per-rule failure counts per batch.
+      - name: reconciliation
+        description: Row-count balance bronze = silver + rejected + duplicates per batch.
