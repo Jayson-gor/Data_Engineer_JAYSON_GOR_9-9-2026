@@ -1,0 +1,84 @@
+version: 2
+
+models:
+  - name: fct_fare_observations
+    description: >
+      **Grain:** one row per distinct fare observation per snapshot_date
+      (airline x flight x route x departure/arrival slot x stops x cabin class x
+      days_left x price). Exact duplicates were collapsed upstream; different
+      prices for the same itinerary on the same day are distinct facts.
+      Incrementally loaded by replacing whole snapshot_date partitions.
+    columns:
+      - name: fare_record_key
+        description: Primary key (SHA-256 of business columns + snapshot_date).
+        tests: [not_null, unique]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: airline_key
+        tests:
+          - not_null
+          - relationships: { to: ref('dim_airline'), field: airline_key }
+      - name: route_key
+        tests:
+          - not_null
+          - relationships: { to: ref('dim_route'), field: route_key }
+      - name: cabin_class_key
+        tests:
+          - not_null
+          - relationships: { to: ref('dim_cabin_class'), field: cabin_class_key }
+      - name: departure_slot_key
+        tests:
+          - relationships: { to: ref('dim_time_slot'), field: time_slot_key }
+      - name: arrival_slot_key
+        tests:
+          - relationships: { to: ref('dim_time_slot'), field: time_slot_key }
+      - name: price_inr
+        description: Fare in INR (measure).
+        tests: [not_null, positive_value]
+      - name: duration_hours
+        tests: [not_null, positive_value]
+      - name: days_left
+        tests: [not_null]
+      - name: booking_window
+        tests:
+          - accepted_values:
+              values: ["0-3 days", "4-7 days", "8-14 days", "15-30 days", "31+ days"]
+      - name: price_per_hour_inr
+        description: price_inr / duration_hours - normalises price across sector lengths.
+
+  - name: dim_airline
+    description: Carrier dimension. Grain one row per airline.
+    columns:
+      - name: airline_key
+        tests: [not_null, unique]
+      - name: airline_code
+        tests: [not_null, unique]
+
+  - name: dim_route
+    description: Directional origin-destination dimension. Grain one row per (source_city, destination_city).
+    columns:
+      - name: route_key
+        tests: [not_null, unique]
+      - name: route
+        tests: [not_null, unique]
+
+  - name: dim_time_slot
+    description: Role-playing time-of-day dimension used for both departure and arrival.
+    columns:
+      - name: time_slot_key
+        tests: [not_null, unique]
+      - name: slot_order
+        tests: [not_null]
+
+  - name: dim_cabin_class
+    columns:
+      - name: cabin_class_key
+        tests: [not_null, unique]
+
+  - name: dim_date
+    description: Calendar dimension for snapshot dates.
+    columns:
+      - name: date_day
+        tests: [not_null, unique]
+      - name: date_key
+        tests: [not_null, unique]

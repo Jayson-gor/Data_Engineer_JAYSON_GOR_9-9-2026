@@ -1,0 +1,70 @@
+version: 2
+
+models:
+  - name: mart_route_pricing
+    description: >
+      Route pricing benchmark. **Grain:** snapshot_date x route x airline x cabin_class x stops.
+      Answers "who is cheapest on a sector and what is the non-stop premium".
+    tests:
+      - unique_combination:
+          columns: [snapshot_date, route, airline_code, cabin_class, stops]
+    columns:
+      - name: fare_count
+        tests: [positive_value]
+      - name: median_price_inr
+        tests: [not_null, positive_value]
+      - name: price_rank_on_route
+        tests: [not_null]
+
+  - name: mart_booking_lead_time
+    description: >
+      Advance-purchase curve. **Grain:** snapshot_date x airline x cabin_class x booking_window.
+      Quantifies the last-minute premium vs the 31+ day baseline.
+    tests:
+      - unique_combination:
+          columns: [snapshot_date, airline_code, cabin_class, booking_window]
+    columns:
+      - name: booking_window
+        tests:
+          - accepted_values:
+              values: ["0-3 days", "4-7 days", "8-14 days", "15-30 days", "31+ days"]
+      - name: median_price_inr
+        tests: [not_null, positive_value]
+
+  - name: mart_airline_performance
+    description: >
+      Carrier scorecard. **Grain:** snapshot_date x airline x cabin_class.
+      Fare share, route coverage, non-stop ratio, price positioning.
+    tests:
+      - unique_combination:
+          columns: [snapshot_date, airline_code, cabin_class]
+    columns:
+      - name: fare_share_pct
+        tests:
+          - value_between: { min_value: 0, max_value: 100 }
+      - name: nonstop_pct
+        tests:
+          - value_between: { min_value: 0, max_value: 100 }
+
+  - name: mart_time_slot_demand
+    description: >
+      Departure-window supply/price view. **Grain:** snapshot_date x route x departure_time_slot x cabin_class.
+    tests:
+      - unique_combination:
+          columns: [snapshot_date, route, departure_time_slot, cabin_class]
+    columns:
+      - name: slot_share_pct
+        tests:
+          - value_between: { min_value: 0, max_value: 100 }
+
+  - name: mart_data_quality
+    description: >
+      Pipeline observability. **Grain:** snapshot_date x batch_id x rule_name, joined to
+      per-batch reconciliation and Gold row counts.
+    columns:
+      - name: bronze_to_silver_balanced
+        tests:
+          - accepted_values: { values: [true], quote: false }
+      - name: silver_to_gold_balanced
+        tests:
+          - accepted_values: { values: [true], quote: false }
